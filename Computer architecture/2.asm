@@ -1,0 +1,207 @@
+DATA SEGMENT
+ OLD_OFF DW ?
+ OLD_SEG DW ?
+ MKBAK DB ?
+ DATA ENDS
+CODE SEGMENT
+ ASSUME CS:CODE,DS:DATA
+ START PROC FAR
+  MOV AL,13H              ;8259a初始化
+  OUT 20H,AL
+  MOV AL,8
+  OUT 21H,AL
+  MOV AL,8
+  OUT 21H,AL 
+  
+  MOV AX,DATA
+  MOV DS,AX
+  IN AL,21H
+  MOV MKBAK,AL
+  CLI
+  AND AL,11111101B
+  OUT 21H,AL
+
+  MOV AH,35H     ;取原键盘中断向量
+  MOV AL,9H
+  INT 21H      
+  
+  MOV OLD_OFF,BX            ;设置新的中断向量
+  MOV BX,ES
+  MOV OLD_SEG,BX
+  MOV AH,25H
+  MOV AL,9H
+  MOV DX,SEG MYINT
+  MOV DS,DX
+  MOV DX,OFFSET MYINT
+  INT 21H
+  
+AGA:  MOV AL,2           ;屏蔽键盘中断，大约10秒
+     OUT 21H,AL
+ start1:
+  mov dx,25000
+  del1:mov cx,5801
+  del2:loop del2
+  dec dx
+  jnz del1 
+  
+  AND AL,11111101B         ;接受键盘中断
+  OUT 21H,AL
+ A1: STI                                       
+ start2:
+  mov dx,25000
+  del11:mov cx,5801
+  del22:loop del22
+  dec dx
+  jnz del11
+  CLI
+  JMP AGA
+
+  MOV AH,25H               ;恢复原中断向量
+  MOV AL,9H
+  MOV DX,OLD_SEG
+  MOV DS,DX
+  MOV DX,OLD_OFF
+  INT 21H
+  MOV AL,MKBAK
+  OUT 21H,AL
+  STI
+  MOV AX,4C00H
+  INT 21H
+  RET     
+  
+START ENDP                 ;中断处理程序
+MYINT PROC FAR
+   STI
+   PUSH DX
+   IN AL,060H
+   PUSH AX
+   IN AL,61H
+   MOV AH,AL
+   OR AL,80H
+   OUT 061H,AL
+   XCHG AH,AL
+   OUT 061H,AL
+   POP AX
+   MOV DH,AL
+   CALL DISPLAY
+   POP DX
+   CLI
+   MOV AL,20H
+   OUT 20H,AL
+   IRET
+ MYINT ENDP  
+
+DISPLAY PROC NEAR
+   CMP DH,01EH
+   JNE B
+   MOV DL,62H
+   JMP EXIT
+ B:CMP DH,030H
+   JNE C
+   MOV DL,63H
+   JMP EXIT
+ C:CMP DH,02EH
+   JNE D
+   MOV DL,64H
+   JMP EXIT
+ D:CMP DH,020H
+   JNE E
+   MOV DL,65H
+   JMP EXIT
+ E:CMP DH,12H
+   JNE F
+   MOV DL,66H
+   JMP EXIT
+ F:CMP DH,021H  
+   JNE G
+   MOV DL,67H
+   JMP EXIT
+ G:CMP DH,022H
+   JNE H
+   MOV DL,68H
+   JMP EXIT
+ H:CMP DH,023H
+   JNE I
+   MOV DL,69H
+   JMP EXIT
+ I:CMP DH,017H
+   JNE J
+   MOV DL,6AH
+   JMP EXIT
+ J:CMP DH,24H
+   JNE K
+   MOV DL,6BH
+   JMP EXIT
+ K:CMP DH,25H
+   JNE L
+   MOV DL,6CH
+   JMP EXIT
+ L:CMP DH,26H
+   JNE M
+   MOV DL,6DH
+   JMP EXIT
+ M:CMP DH,32H
+   JNE N
+   MOV DL,6EH
+   JMP EXIT
+ N:CMP DH,31H
+   JNE O
+   MOV DL,6FH
+   JMP EXIT
+ O:CMP DH,18H
+   JNE P
+   MOV DL,70H
+   JMP EXIT
+ P:CMP DH,19H
+   JNE Q
+   MOV DL,71H
+   JMP EXIT
+ Q:CMP DH,10H
+   JNE R
+   MOV DL,72H
+   JMP EXIT
+ R:CMP DH,13H
+   JNE S
+   MOV DL,73H
+   JMP EXIT
+ S:CMP DH,1FH
+   JNE T
+   MOV DL,74H
+   JMP EXIT
+ T:CMP DH,14H
+   JNE U
+   MOV DL,75H
+   JMP EXIT
+ U:CMP DH,16H
+   JNE V
+   MOV DL,76H
+   JMP EXIT
+ V:CMP DH,2FH
+   JNE W
+   MOV DL,77H
+   JMP EXIT
+W: CMP DH,11H
+   JNE X
+   MOV DL,78H
+   JMP EXIT
+ X:CMP DH,2DH
+   JNE Y
+   MOV DL,79H
+   JMP EXIT
+ Y:CMP DH,15H  
+   JNE Z
+   MOV DL,7AH
+   JMP EXIT
+  Z:CMP DH,2CH
+    JNE EXIT2
+    MOV DL,61H
+    JMP EXIT
+   
+EXIT : MOV AH,02H
+     INT 21H
+     RET
+EXIT2:     RET
+ DISPLAY ENDP
+ CODE ENDS
+ END START
+
